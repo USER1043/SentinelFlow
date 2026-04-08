@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: sentinelflow-api
+    ports:
+      - "8080:8080"
+    environment:
+      # Database Configuration
+      INSTANCE_CONNECTION_NAME: ${INSTANCE_CONNECTION_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      
+      # Application Settings
+      PORT: 8080
+      SQL_ECHO: ${SQL_ECHO:-false}
+      
+      # Google Cloud
+      GOOGLE_APPLICATION_CREDENTIALS: /app/credentials/service-account-key.json
+      GOOGLE_CLOUD_PROJECT: ${GCP_PROJECT_ID}
+    
+    volumes:
+      # Mount credentials
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/app/credentials/service-account-key.json:ro
+      # Mount source for development
+      - .:/app
+    
+    networks:
+      - sentinelflow-network
+    
+    depends_on:
+      - postgres
+
+  postgres:
+    # This is a placeholder - in production, use AlloyDB
+    image: pgvector/pgvector:pg15
+    container_name: sentinelflow-postgres
+    environment:
+      POSTGRES_DB: sentinelflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - sentinelflow-network
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres-data:
+
+networks:
+  sentinelflow-network:
+    driver: bridge
