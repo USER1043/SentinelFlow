@@ -64,7 +64,7 @@ class AnalystAgent:
         Credentials are automatically loaded from the environment.
         """
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite-preview",
             temperature=0.7,
             max_tokens=2048,
         )
@@ -82,7 +82,7 @@ Please analyze the following meeting transcript and extract ALL action items, ta
 For each action item, provide:
 1. A clear, detailed description of what needs to be done
 2. The person responsible (if explicitly mentioned; otherwise leave null)
-3. Any mentioned deadline or due date (if mentioned; otherwise leave null)
+3. Any mentioned deadline or due date in ISO format (if mentioned; otherwise leave null)
 
 Format your response as a JSON array of objects with keys: description, owner, deadline
 

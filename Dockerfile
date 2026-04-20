@@ -1,49 +1,28 @@
-# Multi-stage build for SentinelFlow
+# Use the Python version we stabilized (3.13)
+FROM python:3.13-slim
 
-# Build stage
-FROM python:3.11-slim as builder
+# 1. Install uv for faster, reliable dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-WORKDIR /app
-
-# Install system dependencies
+# 2. Install system dependencies for AlloyDB/Postgres
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy pyproject.toml and install dependencies
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e .
-
-# Runtime stage
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install runtime dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+WORKDIR /app
 
-# Copy application code
+# 3. Use your lockfile to ensure identical dependencies
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen
+
+# 4. Copy application code
 COPY . .
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
-
-# Expose port
-EXPOSE 8080
-
-# Set environment variables
+# 5. Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8080
 
-# Run the application
-CMD ["python", "main.py"]
+# 6. Final start command
+# We use 'uv run' to ensure the virtualenv is active
+CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
